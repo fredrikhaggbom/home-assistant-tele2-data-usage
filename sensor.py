@@ -21,6 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "Tele2 Data usage"
 DOMAIN = "tele2_datausage"
+ATTRIBUTE_UNLIMITED = "Unlimited"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -69,6 +70,7 @@ class Tele2DataSensor(SensorEntity):
         self.DATA_USAGE_URL = self.BASE_URL + "/api/subscriptions/22390478/data-usage"
         self.CREDENTIALS = {"username": username, "password": password}
         self.username = username
+        self._attributes = {ATTRIBUTE_UNLIMITED: False}
 
         self.session = requests.Session()
         self.tries = 0
@@ -88,6 +90,11 @@ class Tele2DataSensor(SensorEntity):
         return "tele2" + self.username
 
     @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        return self._attributes
+
+    @property
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self.unique_id)},
@@ -98,9 +105,13 @@ class Tele2DataSensor(SensorEntity):
     def update(self) -> None:
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         if round(deltaSeconds) < self.pollInterval:
-            _LOGGER.debug("Will wait until more time passed (seconds since last: %s, poll interval: %s)", round(deltaSeconds), self.pollInterval)
+            _LOGGER.debug(
+                "Will wait until more time passed (seconds since last: %s, poll interval: %s)",
+                round(deltaSeconds),
+                self.pollInterval,
+            )
             return
-        
+
         _LOGGER.debug("updating value")
         resp = self.session.get(self.DATA_USAGE_URL)
         if (resp.status_code == 401 or resp.status_code == 403) and self.tries < 1:
@@ -113,7 +124,15 @@ class Tele2DataSensor(SensorEntity):
             data = json.loads(resp.content)
             limit = data["packageLimit"]
             usage = data["usage"]
-            _LOGGER.debug("got result. Limit: %s, usage: %s", limit, usage)
+            _LOGGER.debug(
+                "got result. Limit: %s, usage: %s, unlimited: %s",
+                limit,
+                usage,
+                data["hasUnlimitedData"],
+            )
+            if "hasUnlimitedData" in data:
+                self._attributes = {ATTRIBUTE_UNLIMITED: data["hasUnlimitedData"]}
+
             if limit is not None and usage is not None:
                 self.lastPoll = datetime.datetime.now()
                 dataLeft = round(limit - usage)
@@ -122,7 +141,7 @@ class Tele2DataSensor(SensorEntity):
                 self.tries = 0
                 return
         else:
-             _LOGGER.debug("Error. Code: " + str(resp.status_code))
+            _LOGGER.debug("Error. Code: " + str(resp.status_code))
 
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
