@@ -1,0 +1,11 @@
+{
+  "codeowners": ["@fredrikhaggbom"],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/fredrikhaggbom/tele2datausage",
+  "domain": "tele2_datausage",
+  "iot_class": "cloud_polling",
+  "name": "Tele2: Data usage",
+  "requirements": [],
+  "version": "0.0.1"
+}
