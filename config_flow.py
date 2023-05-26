@@ -5,8 +5,13 @@ import re
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.template import Template
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_USERNAME,
+    CONF_PASSWORD,
+)
 
-from . import DOMAIN
+from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL
 
 
 class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -26,11 +31,20 @@ class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._errors = {}
 
         if user_input is not None:
+            if CONF_USERNAME in user_input:
+                await self.async_set_unique_id("Tele2-" + user_input[CONF_USERNAME])
+                self._abort_if_unique_id_configured()
+            else:
+                 await self.async_set_unique_id("Tele2-" + "data")
+                 self._abort_if_unique_id_configured()
+            
             return self.async_create_entry(title="Tele2", data=user_input)
 
         data_schema = {
-            vol.Required("username", default=""): str,
-            vol.Required("password", default=""): str,
+            vol.Optional(CONF_NAME, default="Tele2 data usage"): str,
+            vol.Optional(POLL_INTERVAL, default=1800): int,
+            vol.Required(CONF_USERNAME, default=""): str,
+            vol.Required(CONF_PASSWORD, default=""): str,
         }
 
         placeholders = {

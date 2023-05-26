@@ -1,8 +1,8 @@
 {
   "codeowners": ["@fredrikhaggbom"],
-  "config_flow": false,
+  "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/fredrikhaggbom/tele2datausage",
+  "documentation": "https://github.com/fredrikhaggbom/home-assistant-tele2-data-usage",
   "domain": "tele2_datausage",
   "iot_class": "cloud_polling",
   "name": "Tele2: Data usage",

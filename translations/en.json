@@ -1,0 +1,24 @@
+{
+  "config": {
+    "title": "Tele2",
+    "step": {
+      "user": {
+        "title": "Tele2 configuration",
+        "description": "Setup a Tele2 sensor",
+        "data": {
+          "name": "Name of sensor",
+          "username": "Tele2 username (usually phone no)",
+          "password": "Tele2 password",
+          "poll_interval": "Poll intervall (seconds)"
+        }
+      }
+    },
+    "error": {
+      "name_exists": "Name already exists",
+      "invalid_template": "The template is invalid"
+    },
+    "abort": {
+      "already_configured": "User is already configured"
+    }
+  }
+}

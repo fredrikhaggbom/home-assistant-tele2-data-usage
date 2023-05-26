@@ -10,7 +10,14 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import CONF_NAME
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_USERNAME,
+    CONF_PASSWORD,
+)
+
+from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL
+
 from homeassistant.const import UnitOfInformation
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -19,18 +26,31 @@ import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_NAME = "Tele2 Data usage"
-DOMAIN = "tele2_datausage"
-ATTRIBUTE_UNLIMITED = "Unlimited"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_NAME, default="Tele2 data usage"): cv.string,
-        vol.Optional("poll_interval", default=1800): cv.positive_int,
-        vol.Required("username", default=""): cv.string,
-        vol.Required("password", default=""): cv.string,
+        vol.Optional(POLL_INTERVAL, default=1800): cv.positive_int,
+        vol.Required(CONF_USERNAME, default=""): cv.string,
+        vol.Required(CONF_PASSWORD, default=""): cv.string,
     }
 )
+
+async def async_setup_entry(hass, config_entry, async_add_devices):
+    """Setup sensor platform for the ui"""
+    config = config_entry.data
+    _dry_setup(hass, config, async_add_devices)
+    return True
+
+def _dry_setup(hass, config, add_devices, discovery_info=None):
+    """Setup the damn platform using yaml."""
+    name = config[CONF_NAME]
+    pollInterval = config.get(POLL_INTERVAL)
+    username = config.get(CONF_USERNAME)
+    password = config.get(CONF_PASSWORD)
+
+    sensor = Tele2DataSensor(username, password, name, pollInterval)
+    add_devices([sensor])
 
 
 async def async_setup_platform(
@@ -41,9 +61,9 @@ async def async_setup_platform(
 ) -> None:
     """Set up the sensor platform."""
     name = config[CONF_NAME]
-    pollInterval = config.get("poll_interval")
-    username = config.get("username")
-    password = config.get("password")
+    pollInterval = config.get(POLL_INTERVAL)
+    username = config.get(CONF_USERNAME)
+    password = config.get(CONF_PASSWORD)
 
     add_entities([Tele2DataSensor(username, password, name, pollInterval)], True)
     return True

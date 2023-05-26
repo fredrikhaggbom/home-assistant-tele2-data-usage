@@ -1,0 +1,24 @@
+{
+  "config": {
+    "title": "Tele2",
+    "step": {
+      "user": {
+        "title": "Tele2-konfiguration",
+        "description": "Skapa en Tele2-sensor",
+        "data": {
+          "name": "Namnet på sensorn",
+          "username": "Tele2-användarnamn (vanligtvis mobilnummer)",
+          "password": "Tele2-lösenord",
+          "poll_interval": "Uppdateringsintervall (sekunder)"
+        }
+      }
+    },
+    "error": {
+      "name_exists": "Namnet finns redan",
+      "invalid_template": "The template is invalid"
+    },
+    "abort": {
+      "already_configured": "Användare redan konfigurerad"
+    }
+  }
+}
