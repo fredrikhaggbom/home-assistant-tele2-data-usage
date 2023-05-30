@@ -115,7 +115,10 @@ class Tele2Session:
                 username,
                 "****",
             )
-            self.subscriptionId = config[CONF_SUBSCRIPTION]
+            if CONF_SUBSCRIPTION in config:
+                self.subscriptionId = config[CONF_SUBSCRIPTION]
+            else:
+                self.subscriptionId = "unknown"
             self.pollInterval = pollInterval
             self.BASE_URL = "https://my.tso.tele2.se"
             self.AUTH_URL = self.BASE_URL + "/auth/login"
