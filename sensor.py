@@ -10,13 +10,17 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+)
 from homeassistant.const import (
     CONF_NAME,
     CONF_USERNAME,
     CONF_PASSWORD,
 )
 
-from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL
+from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL, RES_DATA_LEFT, RES_UNLIMITED, RES_LIMIT, RES_PERIOD_START, RES_PERIOD_END, DEVICE_NAME, SensorType
+from . import Tele2Session
 
 from homeassistant.const import UnitOfInformation
 from homeassistant.core import HomeAssistant
@@ -29,28 +33,36 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Optional(CONF_NAME, default="Tele2 data usage"): cv.string,
+        vol.Optional(CONF_NAME, default="Tele2 Data"): cv.string,
         vol.Optional(POLL_INTERVAL, default=1800): cv.positive_int,
         vol.Required(CONF_USERNAME, default=""): cv.string,
         vol.Required(CONF_PASSWORD, default=""): cv.string,
     }
 )
 
-async def async_setup_entry(hass, config_entry, async_add_devices):
+async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup sensor platform for the ui"""
     config = config_entry.data
-    _dry_setup(hass, config, async_add_devices)
+    _LOGGER.debug("Add entities in async_setup_entry")
+    await _dry_setup(hass, config, async_add_entities)
     return True
 
-def _dry_setup(hass, config, add_devices, discovery_info=None):
+async def _dry_setup(hass, config, add_entities, discovery_info=None):
     """Setup the damn platform using yaml."""
-    name = config[CONF_NAME]
-    pollInterval = config.get(POLL_INTERVAL)
-    username = config.get(CONF_USERNAME)
-    password = config.get(CONF_PASSWORD)
+    _LOGGER.debug("In dry_setup")
+    api = Tele2Session(hass, config)
+    await api._update()
 
-    sensor = Tele2DataSensor(username, password, name, pollInterval)
-    add_devices([sensor])
+    dataLeftSensor = Tele2Sensor(hass, api, SensorType.DATA, "Tele2 Data Left", "tele2.dataleft", RES_DATA_LEFT)
+    dataTotal = Tele2Sensor(hass, api, SensorType.DATA, "Tele2 Data Total", "tele2.datatotal", RES_LIMIT)
+    dataPeriodStart = Tele2Sensor(hass, api, SensorType.DATE, "Tele2 Data Period Start", "tele2.dataperiodstart", RES_PERIOD_START)
+    dataPeriodEnd = Tele2Sensor(hass, api, SensorType.DATE, "Tele2 Data Period End", "tele2.dataperiodend", RES_PERIOD_END)
+    unlimitedSensor = Tele2BinaryDataSensor(hass, api, "Tele2 Unlimited Data", "tele2.unlimiteddata", RES_UNLIMITED)
+
+    add_entities([dataLeftSensor, dataTotal, dataPeriodStart, dataPeriodEnd, unlimitedSensor])
+
+    if DOMAIN in hass.data:
+        _LOGGER.debug(hass.data[DOMAIN])
 
 
 async def async_setup_platform(
@@ -60,112 +72,125 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the sensor platform."""
-    name = config[CONF_NAME]
-    pollInterval = config.get(POLL_INTERVAL)
-    username = config.get(CONF_USERNAME)
-    password = config.get(CONF_PASSWORD)
 
-    add_entities([Tele2DataSensor(username, password, name, pollInterval)], True)
+    _LOGGER.debug("Add entities in async_setup_platform")
+    api = Tele2Session(hass, config)
+    await api._update()  
+    dataLeftSensor = Tele2Sensor(hass, api, SensorType.DATA, "Tele2 Data Left", "tele2.dataleft", RES_DATA_LEFT)
+    dataTotal = Tele2Sensor(hass, api, SensorType.DATA, "Tele2 Data Total", "tele2.datatotal", RES_LIMIT)
+
+    dataPeriodStart = Tele2Sensor(hass, api, SensorType.DATE, "Tele2 Data Period Start", "tele2.dataperiodstart", RES_PERIOD_START)
+    dataPeriodEnd = Tele2Sensor(hass, api, SensorType.DATE, "Tele2 Data Period End", "tele2.dataperiodend", RES_PERIOD_END)
+
+    unlimitedSensor = Tele2BinaryDataSensor(hass, api, "Tele2 Unlimited Data", "tele2.unlimiteddata", RES_UNLIMITED)
+    add_entities([dataLeftSensor, dataTotal, dataPeriodStart, dataPeriodEnd, unlimitedSensor], True)
     return True
 
 
-class Tele2DataSensor(SensorEntity):
+class Tele2Sensor(SensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self, username, password, name, pollInterval) -> None:
+    def __init__(self, hass, tele2Session: Tele2Session, sensorType: SensorType, sensorName, identifier, updateField) -> None:
         super().__init__()
-        self._name = name
-        self._attr_name = name
-        # self._attr_native_unit_of_measurement = TEMP_CELSIUS
-        self._attr_device_class = SensorDeviceClass.DATA_SIZE
-        self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_native_unit_of_measurement = UnitOfInformation.MEGABYTES
-        self._attr_native_value = 0
-        self._attr_suggested_display_precision = None
-        self._attr_suggested_unit_of_measurement = "GB"
+        self._hass = hass
+        self._tele2Session = tele2Session
+        self._name = sensorName
+        self._identifier = identifier
+        self._updateField = updateField
+        self._attr_name = self._tele2Session.config[CONF_NAME]
+        self._attr_native_value = None
 
-        self.pollInterval = pollInterval
-        self.BASE_URL = "https://my.tso.tele2.se"
-        self.AUTH_URL = self.BASE_URL + "/auth/login"
-        self.DATA_USAGE_URL = self.BASE_URL + "/api/subscriptions/22390478/data-usage"
-        self.CREDENTIALS = {"username": username, "password": password}
-        self.username = username
-        self._attributes = {ATTRIBUTE_UNLIMITED: False}
+        if sensorType == SensorType.DATA:
+            self._attr_device_class = SensorDeviceClass.DATA_SIZE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_native_unit_of_measurement = UnitOfInformation.MEGABYTES
+            self._attr_native_value = 0
+            self._attr_suggested_display_precision = None
+            self._attr_suggested_unit_of_measurement = "GB"
+        elif sensorType == SensorType.DATE:
+            self._attr_native_value = datetime.date.min
+            self._attr_device_class= SensorDeviceClass.DATE
+        else:
+            self._attr_native_value = None
 
-        self.session = requests.Session()
-        self.tries = 0
-
-        self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
-
-        _LOGGER.debug("setting up with user %s", username)
+        _LOGGER.debug("setting data left sensor up with user %s", self._tele2Session.config[CONF_USERNAME])
 
     @property
     def name(self) -> str:
-        """Return the name of the switch."""
+        """Return the name of the sensor."""
         return self._name
 
     @property
     def unique_id(self) -> str:
         """Return a unique, Home Assistant friendly identifier for this entity."""
-        return "tele2" + self.username
+        return self._identifier + "." + self._tele2Session.config[CONF_USERNAME]
 
-    @property
+    """ @property
     def extra_state_attributes(self):
-        """Return entity specific state attributes."""
-        return self._attributes
+        return self._attributes """
 
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self.unique_id)},
-            "name": self.name,
-            "manufacturer": DOMAIN,
+            "identifiers": { DOMAIN }#,
+            #"name": self._tele2Session.config[CONF_NAME],
+            #"manufacturer": DEVICE_NAME,
         }
+    
+    async def async_update(self) -> None:
+        """Manual updates of the sensor."""
+        _LOGGER.debug("Will ask tele2session to update data (async)")
+        self.hass.async_create_task(self._tele2Session._update())
+        newValue = self._tele2Session._data[self._updateField]
+        if newValue != self._attr_native_value:
+            self._attr_native_value = newValue
 
-    def update(self) -> None:
-        deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
-        if round(deltaSeconds) < self.pollInterval:
-            _LOGGER.debug(
-                "Will wait until more time passed (seconds since last: %s, poll interval: %s)",
-                round(deltaSeconds),
-                self.pollInterval,
-            )
-            return
+class Tele2BinaryDataSensor(BinarySensorEntity):
+    """Representation of a Sensor."""
 
-        _LOGGER.debug("updating value")
-        resp = self.session.get(self.DATA_USAGE_URL)
-        if (resp.status_code == 401 or resp.status_code == 403) and self.tries < 1:
-            _LOGGER.debug("error with status code: %d", resp.status_code)
-            self.tries += 1
-            self.updateAuth()
-            self.update()
-            return
-        elif resp.status_code == 200:
-            data = json.loads(resp.content)
-            limit = data["packageLimit"]
-            usage = data["usage"]
-            _LOGGER.debug(
-                "got result. Limit: %s, usage: %s, unlimited: %s",
-                limit,
-                usage,
-                data["hasUnlimitedData"],
-            )
-            if "hasUnlimitedData" in data:
-                self._attributes = {ATTRIBUTE_UNLIMITED: data["hasUnlimitedData"]}
+    def __init__(self, hass, tele2Session: Tele2Session, sensorName, identifier, updateField) -> None:
+        super().__init__()
+        self._hass = hass
+        self._tele2Session = tele2Session
+        self._updateField = updateField
+        self._name = sensorName
+        self._identifier = identifier
+        self._attr_name = self._tele2Session.config[CONF_NAME]
+        self._attr_is_on = False        
+        _LOGGER.debug("setting data left sensor up with user %s", self._tele2Session.config[CONF_USERNAME])
 
-            if limit is not None and usage is not None:
-                self.lastPoll = datetime.datetime.now()
-                dataLeft = round(limit - usage)
-                _LOGGER.debug("Setting native value to: %d", dataLeft)
-                self._attr_native_value = dataLeft
-                self.tries = 0
-                return
-        else:
-            _LOGGER.debug("Error. Code: " + str(resp.status_code))
+    @property
+    def name(self) -> str:
+        """Return the name of the sensor."""
+        return self._name
 
-        self.lastPoll = datetime.datetime.now()
-        self.tries = 0
+    @property
+    def unique_id(self) -> str:
+        """Return a unique, Home Assistant friendly identifier for this entity."""
+        return self._identifier + "." + self._tele2Session.config[CONF_USERNAME]
 
-    def updateAuth(self) -> None:
-        _LOGGER.debug("Updating authentication")
-        self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
+    @property
+    def device_info(self):
+        return {
+            "identifiers": { DOMAIN }#,
+            #"name": self._tele2Session.config[CONF_NAME],
+            #"manufacturer": DEVICE_NAME,
+        }
+    
+    @property
+    def state(self):
+        _LOGGER.debug("Return from state")
+        return self._attr_is_on
+
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the binary sensor."""
+        _LOGGER.debug("Return from is_on")
+        return self._attr_is_on
+    
+    async def async_update(self) -> None:
+        """Manual updates of the sensor."""
+        _LOGGER.debug("Will update unlimited binary sensor data (async) from previous call")
+        newValue = self._tele2Session._data[self._updateField]
+        if newValue != self._attr_is_on:
+            self._attr_is_on = newValue
