@@ -141,8 +141,12 @@ class Tele2Session:
             self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
 
     async def getSubscriptionId(self) -> str:
-        self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
-        resp = self.session.get(self.SUBSCRIPTION_URL)
+        await self._hass.async_add_executor_job(
+            self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
+        )
+        resp = await self._hass.async_add_executor_job(
+            self.session.get(self.SUBSCRIPTION_URL)
+        )
         if resp.status_code == 200:
             data = json.loads(resp.content)
             if len(data) > 0 and "subsId" in data[0]:
