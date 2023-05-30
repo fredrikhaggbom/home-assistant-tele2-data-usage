@@ -10,8 +10,35 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
 )
+from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL
+from .const import (
+    DOMAIN,
+    ATTRIBUTE_UNLIMITED,
+    DEFAULT_NAME,
+    POLL_INTERVAL,
+    CONF_SUBSCRIPTION,
+)
+from . import Tele2Session
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, str]:
+    """Validate the user input allows us to connect.
+
+    Data has the keys from DATA_SCHEMA with values provided by the user.
+    """
+    _LOGGER.debug("Getting subId")
+    hub = Tele2Session(hass, data)
+    # The dummy hub provides a `test_connection` method to ensure it's working
+    # as expected
+    result = await hub.getSubscriptionId()
+    if result == "":
+        raise CannotConnect
+
+    _LOGGER.debug("Got subId: " + result)
+    return {CONF_SUBSCRIPTION: result}
 
 
 class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -35,9 +62,12 @@ class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id("Tele2-" + user_input[CONF_USERNAME])
                 self._abort_if_unique_id_configured()
             else:
-                 await self.async_set_unique_id("Tele2-" + "data")
-                 self._abort_if_unique_id_configured()
-            
+                await self.async_set_unique_id("Tele2-" + "data")
+                self._abort_if_unique_id_configured()
+
+            subId = await validate_input(self.hass, user_input)
+            user_input[CONF_SUBSCRIPTION] = subId
+
             return self.async_create_entry(title="Tele2", data=user_input)
 
         data_schema = {

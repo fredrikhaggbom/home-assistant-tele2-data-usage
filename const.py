@@ -5,6 +5,7 @@ DEFAULT_NAME = "Tele2 Data usage"
 DEVICE_NAME = "Tele2"
 ATTRIBUTE_UNLIMITED = "Unlimited"
 POLL_INTERVAL = "poll_interval"
+CONF_SUBSCRIPTION = "subscriptionId"
 
 RES_LIMIT = "packageLimit"
 RES_USAGE = "usage"
@@ -13,6 +14,7 @@ RES_DATA_LEFT = "dataLeft"
 RES_DATA_TOTAL = "dataTotal"
 RES_PERIOD_START = "periodStart"
 RES_PERIOD_END = "periodEnd"
+
 
 class Tele2ApiResult:
     unlimitedData = "hasUnlimitedData"
