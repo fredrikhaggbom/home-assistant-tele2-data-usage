@@ -129,7 +129,7 @@ class Tele2Session:
                 + "/data-usage"
             )
             self.SUBSCRIPTION_URL = (
-                self.BASE_URL + "api/subscriptions?refreshableOnly=false"
+                self.BASE_URL + "/api/subscriptions?refreshableOnly=false"
             )
             self.CREDENTIALS = {"username": username, "password": password}
             self.username = username
@@ -140,17 +140,14 @@ class Tele2Session:
 
             self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
 
-    async def getSubscriptionId(self) -> str:
-        await self._hass.async_add_executor_job(
-            self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
-        )
-        resp = await self._hass.async_add_executor_job(
-            self.session.get(self.SUBSCRIPTION_URL)
-        )
+    def getSubscriptionId(self) -> str:
+        self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
+        resp = self.session.get(self.SUBSCRIPTION_URL)
+        
         if resp.status_code == 200:
             data = json.loads(resp.content)
             if len(data) > 0 and "subsId" in data[0]:
-                return data[0]["subsId"]
+                return str(data[0]["subsId"])
 
         return ""
 

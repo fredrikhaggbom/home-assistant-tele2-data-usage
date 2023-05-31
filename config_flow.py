@@ -24,7 +24,7 @@ from . import Tele2Session
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, str]:
+async def validate_input(hass: HomeAssistant, data: dict) -> str:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -33,12 +33,12 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, str]:
     hub = Tele2Session(hass, data)
     # The dummy hub provides a `test_connection` method to ensure it's working
     # as expected
-    result = await hub.getSubscriptionId()
+    result = await hass.async_add_executor_job(hub.getSubscriptionId)
     if result == "":
         raise CannotConnect
 
     _LOGGER.debug("Got subId: " + result)
-    return {CONF_SUBSCRIPTION: result}
+    return result
 
 
 class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):

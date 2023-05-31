@@ -19,7 +19,7 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 
-from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL, RES_DATA_LEFT, RES_UNLIMITED, RES_LIMIT, RES_PERIOD_START, RES_PERIOD_END, DEVICE_NAME, SensorType
+from .const import DOMAIN, ATTRIBUTE_UNLIMITED, DEFAULT_NAME, POLL_INTERVAL, RES_DATA_LEFT, RES_UNLIMITED, RES_LIMIT, RES_PERIOD_START, RES_PERIOD_END, DEVICE_NAME, CONF_SUBSCRIPTION, SensorType
 from . import Tele2Session
 
 from homeassistant.const import UnitOfInformation
@@ -50,6 +50,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 async def _dry_setup(hass, config, add_entities, discovery_info=None):
     """Setup the damn platform using yaml."""
     _LOGGER.debug("In dry_setup")
+    _LOGGER.debug("Config: %s", config)
     api = Tele2Session(hass, config)
     await api._update()
 
@@ -123,7 +124,7 @@ class Tele2Sensor(SensorEntity):
     @property
     def unique_id(self) -> str:
         """Return a unique, Home Assistant friendly identifier for this entity."""
-        return self._identifier + "." + self._tele2Session.config[CONF_USERNAME]
+        return self._identifier + "." + self._tele2Session.config[CONF_SUBSCRIPTION]
 
     """ @property
     def extra_state_attributes(self):
@@ -132,9 +133,9 @@ class Tele2Sensor(SensorEntity):
     @property
     def device_info(self):
         return {
-            "identifiers": { DOMAIN }#,
-            #"name": self._tele2Session.config[CONF_NAME],
-            #"manufacturer": DEVICE_NAME,
+            "identifiers": { DOMAIN },
+            "name": self._tele2Session.config[CONF_NAME],
+            "manufacturer": DEVICE_NAME,
         }
     
     async def async_update(self) -> None:
@@ -167,14 +168,14 @@ class Tele2BinaryDataSensor(BinarySensorEntity):
     @property
     def unique_id(self) -> str:
         """Return a unique, Home Assistant friendly identifier for this entity."""
-        return self._identifier + "." + self._tele2Session.config[CONF_USERNAME]
+        return self._identifier + "." + self._tele2Session.config[CONF_SUBSCRIPTION]
 
     @property
     def device_info(self):
         return {
-            "identifiers": { DOMAIN }#,
-            #"name": self._tele2Session.config[CONF_NAME],
-            #"manufacturer": DEVICE_NAME,
+            "identifiers": { DOMAIN },
+            "name": self._tele2Session.config[CONF_NAME],
+            "manufacturer": DEVICE_NAME,
         }
     
     @property
