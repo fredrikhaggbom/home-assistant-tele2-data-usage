@@ -255,7 +255,7 @@ class Tele2BinaryDataSensor(BinarySensorEntity):
             "identifiers": {(DOMAIN, self._tele2Session.config[CONF_SUBSCRIPTION])},
             "name": self._tele2Session.config[CONF_NAME],
             "manufacturer": DEVICE_NAME,
-            "model": "Subscription",
+            "model": self._tele2Session.config[CONF_SUBSCRIPTIONMODEL],
         }
 
     @property
