@@ -28,6 +28,7 @@ from .const import (
     RES_PERIOD_START,
     RES_PERIOD_END,
     CONF_SUBSCRIPTION,
+    CONF_SUBSCRIPTIONMODEL,
     Tele2ApiResult,
 )
 
@@ -140,16 +141,19 @@ class Tele2Session:
 
             self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
 
-    def getSubscriptionId(self) -> str:
+    def getSubscription(self) -> dict:
         self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
         resp = self.session.get(self.SUBSCRIPTION_URL)
-        
+
         if resp.status_code == 200:
             data = json.loads(resp.content)
             if len(data) > 0 and "subsId" in data[0]:
-                return str(data[0]["subsId"])
+                return {
+                    CONF_SUBSCRIPTION: str(data[0]["subsId"]),
+                    CONF_SUBSCRIPTIONMODEL: data[0]["name"],
+                }
 
-        return ""
+        return {}
 
     def logInfo(self):
         _LOGGER.debug("In log info")

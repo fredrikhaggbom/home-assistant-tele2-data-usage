@@ -18,13 +18,14 @@ from .const import (
     DEFAULT_NAME,
     POLL_INTERVAL,
     CONF_SUBSCRIPTION,
+    CONF_SUBSCRIPTIONMODEL,
 )
 from . import Tele2Session
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def validate_input(hass: HomeAssistant, data: dict) -> str:
+async def validate_input(hass: HomeAssistant, data: dict) -> dict:
     """Validate the user input allows us to connect.
 
     Data has the keys from DATA_SCHEMA with values provided by the user.
@@ -33,11 +34,11 @@ async def validate_input(hass: HomeAssistant, data: dict) -> str:
     hub = Tele2Session(hass, data)
     # The dummy hub provides a `test_connection` method to ensure it's working
     # as expected
-    result = await hass.async_add_executor_job(hub.getSubscriptionId)
-    if result == "":
+    result = await hass.async_add_executor_job(hub.getSubscription)
+    if result == {}:
         raise CannotConnect
 
-    _LOGGER.debug("Got subId: " + result)
+    _LOGGER.debug("Got subId: " + result[CONF_SUBSCRIPTION])
     return result
 
 
@@ -65,8 +66,9 @@ class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id("Tele2-" + "data")
                 self._abort_if_unique_id_configured()
 
-            subId = await validate_input(self.hass, user_input)
-            user_input[CONF_SUBSCRIPTION] = subId
+            subDetails = await validate_input(self.hass, user_input)
+            user_input[CONF_SUBSCRIPTION] = subDetails[CONF_SUBSCRIPTION]
+            user_input[CONF_SUBSCRIPTIONMODEL] = subDetails[CONF_SUBSCRIPTIONMODEL]
 
             return self.async_create_entry(title="Tele2", data=user_input)
 

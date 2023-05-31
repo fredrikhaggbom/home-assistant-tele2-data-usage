@@ -6,6 +6,7 @@ DEVICE_NAME = "Tele2"
 ATTRIBUTE_UNLIMITED = "Unlimited"
 POLL_INTERVAL = "poll_interval"
 CONF_SUBSCRIPTION = "subscriptionId"
+CONF_SUBSCRIPTIONMODEL = "subscriptionModel"
 
 RES_LIMIT = "packageLimit"
 RES_USAGE = "usage"

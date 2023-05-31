@@ -31,6 +31,7 @@ from .const import (
     RES_PERIOD_END,
     DEVICE_NAME,
     CONF_SUBSCRIPTION,
+    CONF_SUBSCRIPTIONMODEL,
     SensorType,
 )
 from . import Tele2Session
@@ -207,6 +208,7 @@ class Tele2Sensor(SensorEntity):
             "identifiers": {(DOMAIN, self._tele2Session.config[CONF_SUBSCRIPTION])},
             "name": self._tele2Session.config[CONF_NAME],
             "manufacturer": DEVICE_NAME,
+            "model": self._tele2Session.config[CONF_SUBSCRIPTIONMODEL],
         }
 
     async def async_update(self) -> None:
@@ -253,6 +255,7 @@ class Tele2BinaryDataSensor(BinarySensorEntity):
             "identifiers": {(DOMAIN, self._tele2Session.config[CONF_SUBSCRIPTION])},
             "name": self._tele2Session.config[CONF_NAME],
             "manufacturer": DEVICE_NAME,
+            "model": "Subscription",
         }
 
     @property
