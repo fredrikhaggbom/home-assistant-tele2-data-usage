@@ -129,6 +129,9 @@ class Tele2Manager:
     async def initialUpdate(self):
         _LOGGER.debug("Updating initial data")
         self._data = await self._hass.async_add_executor_job(self.api.getDataUsage)
+        self.oldDataLeft = 0
+        if RES_DATA_LEFT in self._data:
+            self.oldDataLeft = self._data[RES_DATA_LEFT]
         _LOGGER.debug("Updated data: %s", str(self._data))
 
     def updateFromApi(self):
@@ -153,24 +156,20 @@ class Tele2Manager:
 
         self.isUpdating = True
         _LOGGER.debug("Updating values from API")
-        newData = self.api.getDataUsage()
+        self._data = self.api.getDataUsage()
         self.isDecreasing = False
-        if (
-            RES_DATA_LEFT in self._data
-            and self._data[RES_DATA_LEFT] is not None
-            and RES_DATA_LEFT in newData
-            and newData[RES_DATA_LEFT] is not None
-        ):
-            self.isDecreasing = newData[RES_DATA_LEFT] < self._data[RES_DATA_LEFT]
+        if RES_DATA_LEFT in self._data and self._data[RES_DATA_LEFT] is not None:
+            self.isDecreasing = self._data[RES_DATA_LEFT] < self.oldDataLeft
             _LOGGER.debug(
                 "newdata: %f, olddata: %f. isdecreasing: %s",
-                newData[RES_DATA_LEFT],
                 self._data[RES_DATA_LEFT],
+                self.oldDataLeft,
                 str(self.isDecreasing),
             )
 
-        self._data = newData
         _LOGGER.debug("Updated data: %s", str(self._data))
+        if RES_DATA_LEFT in self._data:
+            self.oldDataLeft = self._data[RES_DATA_LEFT]
 
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
