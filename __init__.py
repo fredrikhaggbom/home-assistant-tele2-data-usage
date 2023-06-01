@@ -2,6 +2,8 @@ import logging
 import requests
 import datetime
 import json
+import pytele2api
+
 import voluptuous as vol
 
 from homeassistant import core
@@ -18,9 +20,7 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 
-from .const import (
-    DOMAIN,
-    POLL_INTERVAL,
+from pytele2api.const import (
     RES_UNLIMITED,
     RES_LIMIT,
     RES_USAGE,
@@ -29,7 +29,11 @@ from .const import (
     RES_PERIOD_END,
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
-    Tele2ApiResult,
+)
+
+from .const import (
+    DOMAIN,
+    POLL_INTERVAL,
 )
 
 from homeassistant.core import HomeAssistant
@@ -50,7 +54,6 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: core.HomeAssistant, config: dict) -> bool:
     """Set up the Tele2 Data usage component."""
-    # @TODO: Add setup code.
     _LOGGER.debug("Init in async_setup: ", str(config))
     return await _dry_setup(hass, config)
 
@@ -67,21 +70,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _dry_setup(hass: HomeAssistant, config: Config) -> bool:
     """Set up using yaml config file."""
-
     _LOGGER.debug("Tele2 setup done!")
     return True
 
 
-async def async_update(self) -> None:
-    _LOGGER.debug("UPDATE IN INIT")
-
-
-class Tele2Session:
+class Tele2Manager:
     """Holds the data"""
 
     def __init__(self, hass: HomeAssistant, config: Config):
         self._hass = hass
-        self._last_tick = None
+
+        _LOGGER.debug("Init with config: ", str(config))
         self._data = {
             RES_UNLIMITED: False,
             RES_USAGE: None,
@@ -92,8 +91,6 @@ class Tele2Session:
         }
         self.config = config
 
-        _LOGGER.debug("Init with config: ", str(config))
-
         if CONF_NAME in config:
             name = config[CONF_NAME]
         if POLL_INTERVAL in config:
@@ -103,64 +100,31 @@ class Tele2Session:
         if CONF_PASSWORD in config:
             password = config.get(CONF_PASSWORD)
 
-        if (
-            CONF_NAME in config
-            and POLL_INTERVAL in config
-            and CONF_USERNAME in config
-            and CONF_PASSWORD in config
-        ):
-            _LOGGER.debug(
-                "Initing Tele2Session with: %s, %s, %s, %s",
-                name,
-                str(pollInterval),
-                username,
-                "****",
-            )
-            if CONF_SUBSCRIPTION in config:
-                self.subscriptionId = config[CONF_SUBSCRIPTION]
-            else:
-                self.subscriptionId = "unknown"
-            self.pollInterval = pollInterval
-            self.BASE_URL = "https://my.tso.tele2.se"
-            self.AUTH_URL = self.BASE_URL + "/auth/login"
-            self.DATA_USAGE_URL = (
-                self.BASE_URL
-                + "/api/subscriptions/"
-                + self.subscriptionId
-                + "/data-usage"
-            )
-            self.SUBSCRIPTION_URL = (
-                self.BASE_URL + "/api/subscriptions?refreshableOnly=false"
-            )
-            self.CREDENTIALS = {"username": username, "password": password}
-            self.username = username
-            self.isUpdating = False
+        _LOGGER.debug(
+            "Initing Tele2Session with: %s, %s, %s, %s",
+            name,
+            str(pollInterval),
+            username,
+            "****",
+        )
 
-            self.session = requests.Session()
-            self.tries = 0
+        subscriptionId = None
+        if CONF_SUBSCRIPTION in config:
+            subscriptionId = str(config[CONF_SUBSCRIPTION])
 
-            self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
+        self.api = pytele2api.Tele2Api(
+            username, password, subscriptionId=subscriptionId, logger=_LOGGER
+        )
+        self.username = username
+        self.isUpdating = False
+        self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
+        _LOGGER.debug("Updating initial data")
+        self._data = self._hass.async_add_executor_job(self.api.getDataUsage)
 
     def getSubscription(self) -> dict:
-        self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
-        resp = self.session.get(self.SUBSCRIPTION_URL)
+        return self.api.getSubscription()
 
-        if resp.status_code == 200:
-            data = json.loads(resp.content)
-            if len(data) > 0 and "subsId" in data[0]:
-                return {
-                    CONF_SUBSCRIPTION: str(data[0]["subsId"]),
-                    CONF_SUBSCRIPTIONMODEL: data[0]["name"],
-                }
-
-        return {}
-
-    def logInfo(self):
-        _LOGGER.debug("In log info")
-        if DOMAIN in self.config:
-            _LOGGER.debug("Info: nam: %s", str(self.config[DOMAIN]))
-
-    def doTheUpdate(self):
+    def updateFromApi(self):
         _LOGGER.debug("calling _update from init")
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         if round(deltaSeconds) < self.pollInterval:
@@ -175,7 +139,9 @@ class Tele2Session:
 
         self.isUpdating = True
         _LOGGER.debug("updating value")
-        resp = self.session.get(self.DATA_USAGE_URL)
+        self._data = self.api.getDataUsage()
+
+        """ resp = self.session.get(self.DATA_USAGE_URL)
         if (resp.status_code == 401 or resp.status_code == 403) and self.tries < 1:
             _LOGGER.debug("error with status code: %d", resp.status_code)
             self.tries += 1
@@ -223,15 +189,11 @@ class Tele2Session:
                 return
         else:
             self.isUpdating = False
-            _LOGGER.debug("Error. Code: " + str(resp.status_code))
+            _LOGGER.debug("Error. Code: " + str(resp.status_code)) """
 
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
         self.isUpdating = False
 
     async def _update(self):
-        await self._hass.async_add_executor_job(self.doTheUpdate)
-
-    def updateAuth(self) -> None:
-        _LOGGER.debug("Updating authentication")
-        self.session.post(self.AUTH_URL, data=self.CREDENTIALS)
+        await self._hass.async_add_executor_job(self.updateFromApi)

@@ -12,15 +12,17 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .const import (
-    DOMAIN,
-    ATTRIBUTE_UNLIMITED,
-    DEFAULT_NAME,
-    POLL_INTERVAL,
+
+from pytele2api.const import (
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
 )
-from . import Tele2Session
+
+from .const import (
+    DOMAIN,
+    POLL_INTERVAL,
+)
+from . import Tele2Manager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict:
     Data has the keys from DATA_SCHEMA with values provided by the user.
     """
     _LOGGER.debug("Getting subId")
-    hub = Tele2Session(hass, data)
+    hub = Tele2Manager(hass, data)
     # The dummy hub provides a `test_connection` method to ensure it's working
     # as expected
     result = await hass.async_add_executor_job(hub.getSubscription)

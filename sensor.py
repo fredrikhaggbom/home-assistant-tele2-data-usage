@@ -19,22 +19,23 @@ from homeassistant.const import (
     CONF_PASSWORD,
 )
 
-from .const import (
-    DOMAIN,
-    ATTRIBUTE_UNLIMITED,
-    DEFAULT_NAME,
-    POLL_INTERVAL,
+from pytele2api.const import (
     RES_DATA_LEFT,
     RES_UNLIMITED,
     RES_LIMIT,
     RES_PERIOD_START,
     RES_PERIOD_END,
-    DEVICE_NAME,
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
+)
+
+from .const import (
+    DOMAIN,
+    POLL_INTERVAL,
+    DEVICE_NAME,
     SensorType,
 )
-from . import Tele2Session
+from . import Tele2Manager
 
 from homeassistant.const import UnitOfInformation
 from homeassistant.core import HomeAssistant
@@ -67,7 +68,7 @@ async def _dry_setup(hass, config, add_entities, discovery_info=None):
     """Setup the damn platform using yaml."""
     _LOGGER.debug("In dry_setup")
     _LOGGER.debug("Config: %s", config)
-    api = Tele2Session(hass, config)
+    api = Tele2Manager(hass, config)
     await api._update()
 
     dataLeftSensor = Tele2Sensor(
@@ -113,7 +114,7 @@ async def async_setup_platform(
     """Set up the sensor platform."""
 
     _LOGGER.debug("Add entities in async_setup_platform")
-    api = Tele2Session(hass, config)
+    api = Tele2Manager(hass, config)
     await api._update()
     dataLeftSensor = Tele2Sensor(
         hass, api, SensorType.DATA, "Tele2 Data Left", "tele2.dataleft", RES_DATA_LEFT
@@ -155,7 +156,7 @@ class Tele2Sensor(SensorEntity):
     def __init__(
         self,
         hass,
-        tele2Session: Tele2Session,
+        tele2Session: Tele2Manager,
         sensorType: SensorType,
         sensorName,
         identifier,
@@ -224,7 +225,7 @@ class Tele2BinaryDataSensor(BinarySensorEntity):
     """Representation of a Sensor."""
 
     def __init__(
-        self, hass, tele2Session: Tele2Session, sensorName, identifier, updateField
+        self, hass, tele2Session: Tele2Manager, sensorName, identifier, updateField
     ) -> None:
         super().__init__()
         self._hass = hass
