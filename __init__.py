@@ -113,7 +113,7 @@ class Tele2Manager:
             subscriptionId = str(config[CONF_SUBSCRIPTION])
 
         self.api = pytele2api.Tele2Api(
-            username, password, subscriptionId=subscriptionId, logger=_LOGGER
+            username, password, subscriptionId=subscriptionId
         )
         self.pollInterval = pollInterval
         self.username = username
@@ -134,13 +134,14 @@ class Tele2Manager:
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         shouldPoll = round(deltaSeconds) >= self.pollInterval
         if self.isDecreasing:
-            shouldPoll = round(deltaSeconds) >= (self.pollInterval / 4)
+            shouldPoll = round(deltaSeconds) >= round(self.pollInterval / 4)
 
         if not shouldPoll:
             _LOGGER.debug(
-                "Will wait until more time passed (seconds since last: %s, poll interval: %s)",
+                "Will wait until more time passed (seconds since last: %s, poll interval: %s, or %s if data decrease is detected )",
                 round(deltaSeconds),
                 self.pollInterval,
+                round(self.pollInterval / 4),
             )
             return
         if self.isUpdating:
@@ -164,6 +165,7 @@ class Tele2Manager:
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
         self.isUpdating = False
+        _LOGGER.debug("Update complete")
 
     async def _update(self):
         await self._hass.async_add_executor_job(self.updateFromApi)
