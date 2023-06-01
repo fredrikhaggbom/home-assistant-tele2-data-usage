@@ -121,6 +121,7 @@ class Tele2Manager:
         self.isUpdating = False
         self.isDecreasing = False
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
+        self.oldDataLeft = 50000
         self.initialUpdate()
 
     def getSubscription(self) -> dict:
