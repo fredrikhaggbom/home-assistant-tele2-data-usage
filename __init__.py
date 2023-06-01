@@ -115,6 +115,7 @@ class Tele2Manager:
         self.api = pytele2api.Tele2Api(
             username, password, subscriptionId=subscriptionId, logger=_LOGGER
         )
+        self.pollInterval = pollInterval
         self.username = username
         self.isUpdating = False
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
