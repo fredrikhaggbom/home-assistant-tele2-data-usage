@@ -118,6 +118,7 @@ class Tele2Manager:
         self.pollInterval = pollInterval
         self.username = username
         self.isUpdating = False
+        self.isDecreasing = False
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
         _LOGGER.debug("Updating initial data")
         self._data = self._hass.async_add_executor_job(self.api.getDataUsage)
@@ -128,7 +129,11 @@ class Tele2Manager:
 
     def updateFromApi(self):
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
-        if round(deltaSeconds) < self.pollInterval:
+        shouldPoll = round(deltaSeconds) >= self.pollInterval
+        if self.isDecreasing:
+            shouldPoll = round(deltaSeconds) >= (self.pollInterval / 4)
+
+        if not shouldPoll:
             _LOGGER.debug(
                 "Will wait until more time passed (seconds since last: %s, poll interval: %s)",
                 round(deltaSeconds),
@@ -140,7 +145,12 @@ class Tele2Manager:
 
         self.isUpdating = True
         _LOGGER.debug("Updating values from API")
-        self._data = self.api.getDataUsage()
+        newData = self.api.getDataUsage()
+        self.isDecreasing = False
+        if RES_DATA_LEFT in self._data and RES_DATA_LEFT in newData:
+            self.isDecreasing = newData[RES_DATA_LEFT] < self._data[RES_DATA_LEFT]
+
+        self._data = newData
         _LOGGER.debug("Updated data: ", str(self._data))
 
         self.lastPoll = datetime.datetime.now()
