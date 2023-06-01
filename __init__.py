@@ -120,12 +120,15 @@ class Tele2Manager:
         self.isUpdating = False
         self.isDecreasing = False
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
-        _LOGGER.debug("Updating initial data")
-        self._data = self.api.getDataUsage()
-        _LOGGER.debug("Updated data: ", str(self._data))
+        self.initialUpdate()
 
     def getSubscription(self) -> dict:
         return self.api.getSubscription()
+
+    async def initialUpdate(self):
+        _LOGGER.debug("Updating initial data")
+        self._data = await self._hass.async_add_executor_job(self.api.getDataUsage)
+        _LOGGER.debug("Updated data: ", str(self._data))
 
     def updateFromApi(self):
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
