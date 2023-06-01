@@ -121,12 +121,12 @@ class Tele2Manager:
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
         _LOGGER.debug("Updating initial data")
         self._data = self._hass.async_add_executor_job(self.api.getDataUsage)
+        _LOGGER.debug("Updated data: ", str(self._data))
 
     def getSubscription(self) -> dict:
         return self.api.getSubscription()
 
     def updateFromApi(self):
-        _LOGGER.debug("calling _update from init")
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         if round(deltaSeconds) < self.pollInterval:
             _LOGGER.debug(
@@ -139,58 +139,9 @@ class Tele2Manager:
             return
 
         self.isUpdating = True
-        _LOGGER.debug("updating value")
+        _LOGGER.debug("Updating values from API")
         self._data = self.api.getDataUsage()
-
-        """ resp = self.session.get(self.DATA_USAGE_URL)
-        if (resp.status_code == 401 or resp.status_code == 403) and self.tries < 1:
-            _LOGGER.debug("error with status code: %d", resp.status_code)
-            self.tries += 1
-            self.isUpdating = False
-            self.updateAuth()
-            self.doTheUpdate()
-            return
-        elif resp.status_code == 200:
-            data = json.loads(resp.content)
-            limit = data[Tele2ApiResult.packageLimit]
-            usage = data["usage"]
-            remaining = data[Tele2ApiResult.remaining]
-            _LOGGER.debug(
-                "got result. Limit: %s, usage: %s, unlimited: %s",
-                limit,
-                usage,
-                data[Tele2ApiResult.unlimitedData],
-            )
-
-            if Tele2ApiResult.unlimitedData in data:
-                self._data[RES_UNLIMITED] = data[Tele2ApiResult.unlimitedData]
-
-            if Tele2ApiResult.buckets in data and len(data["buckets"]) > 0:
-                bucket = data["buckets"][0]
-                if Tele2ApiResult.startDate in bucket:
-                    startDate = datetime.datetime.strptime(
-                        bucket[Tele2ApiResult.startDate], "%Y-%m-%d"
-                    ).date()
-                    self._data[RES_PERIOD_START] = startDate
-                if Tele2ApiResult.endDate in bucket:
-                    endDate = datetime.datetime.strptime(
-                        bucket[Tele2ApiResult.endDate], "%Y-%m-%d"
-                    ).date()
-                    self._data[RES_PERIOD_END] = endDate
-
-            if limit is not None and usage is not None:
-                self.lastPoll = datetime.datetime.now()
-                dataLeft = remaining
-                _LOGGER.debug("Setting native value to: %d", dataLeft)
-                self.tries = 0
-                self._data[RES_LIMIT] = limit
-                self._data[RES_USAGE] = usage
-                self._data[RES_DATA_LEFT] = dataLeft
-                self.isUpdating = False
-                return
-        else:
-            self.isUpdating = False
-            _LOGGER.debug("Error. Code: " + str(resp.status_code)) """
+        _LOGGER.debug("Updated data: ", str(self._data))
 
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
