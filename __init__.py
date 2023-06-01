@@ -129,7 +129,7 @@ class Tele2Manager:
     async def initialUpdate(self):
         _LOGGER.debug("Updating initial data")
         self._data = await self._hass.async_add_executor_job(self.api.getDataUsage)
-        _LOGGER.debug("Updated data: ", str(self._data))
+        _LOGGER.debug("Updated data: %s", str(self._data))
 
     def updateFromApi(self):
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
@@ -162,9 +162,15 @@ class Tele2Manager:
             and newData[RES_DATA_LEFT] is not None
         ):
             self.isDecreasing = newData[RES_DATA_LEFT] < self._data[RES_DATA_LEFT]
+            _LOGGER.debug(
+                "newdata: %f, olddata: %f. isdecreasing: %s",
+                newData[RES_DATA_LEFT],
+                self._data[RES_DATA_LEFT],
+                str(self.isDecreasing),
+            )
 
         self._data = newData
-        _LOGGER.debug("Updated data: ", str(self._data))
+        _LOGGER.debug("Updated data: %s", str(self._data))
 
         self.lastPoll = datetime.datetime.now()
         self.tries = 0
