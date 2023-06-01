@@ -150,7 +150,12 @@ class Tele2Manager:
         _LOGGER.debug("Updating values from API")
         newData = self.api.getDataUsage()
         self.isDecreasing = False
-        if RES_DATA_LEFT in self._data and RES_DATA_LEFT in newData:
+        if (
+            RES_DATA_LEFT in self._data
+            and self._data[RES_DATA_LEFT] is not None
+            and RES_DATA_LEFT in newData
+            and newData[RES_DATA_LEFT] is not None
+        ):
             self.isDecreasing = newData[RES_DATA_LEFT] < self._data[RES_DATA_LEFT]
 
         self._data = newData
