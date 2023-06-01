@@ -121,7 +121,7 @@ class Tele2Manager:
         self.isDecreasing = False
         self.lastPoll = datetime.datetime.now() - datetime.timedelta(30)
         _LOGGER.debug("Updating initial data")
-        self._data = self._hass.async_add_executor_job(self.api.getDataUsage)
+        self._data = self.api.getDataUsage()
         _LOGGER.debug("Updated data: ", str(self._data))
 
     def getSubscription(self) -> dict:
