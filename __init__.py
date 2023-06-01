@@ -79,6 +79,7 @@ class Tele2Manager:
 
     def __init__(self, hass: HomeAssistant, config: Config):
         self._hass = hass
+        self.pollDecreaseFactor = 4
 
         _LOGGER.debug("Init with config: ", str(config))
         self._data = {
@@ -134,14 +135,17 @@ class Tele2Manager:
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         shouldPoll = round(deltaSeconds) >= self.pollInterval
         if self.isDecreasing:
-            shouldPoll = round(deltaSeconds) >= round(self.pollInterval / 4)
+            shouldPoll = round(deltaSeconds) >= round(
+                self.pollInterval / self.pollDecreaseFactor
+            )
 
         if not shouldPoll:
             _LOGGER.debug(
-                "Will wait until more time passed (seconds since last: %s, poll interval: %s, or %s if data decrease is detected )",
+                "Will wait until more time passed (seconds since last: %s, poll interval: %s)",
                 round(deltaSeconds),
-                self.pollInterval,
-                round(self.pollInterval / 4),
+                round(self.pollInterval / self.pollDecreaseFactor)
+                if self.isDecreasing
+                else self.pollInterval,
             )
             return
         if self.isUpdating:
