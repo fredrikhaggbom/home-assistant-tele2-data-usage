@@ -29,6 +29,7 @@ from pytele2api.const import (
     RES_PERIOD_END,
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
+    RES_ERROR,
 )
 
 from .const import (
@@ -68,6 +69,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return res
 
 
+async def async_unload_entry(hass, entry):
+    """Unload a config entry."""
+    _LOGGER.debug("Unloading Tele2 component")
+    hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    return True
+
+
 async def _dry_setup(hass: HomeAssistant, config: Config) -> bool:
     """Set up using yaml config file."""
     _LOGGER.debug("Tele2 setup done!")
@@ -82,14 +90,21 @@ class Tele2Manager:
         self.pollDecreaseFactor = 4
 
         _LOGGER.debug("Init with config: ", str(config))
-        self._data = {
-            RES_UNLIMITED: False,
-            RES_USAGE: None,
-            RES_LIMIT: None,
-            RES_DATA_LEFT: None,
-            RES_PERIOD_START: None,
-            RES_PERIOD_END: None,
-        }
+
+        if DOMAIN in hass.data:
+            self._data = hass.data[DOMAIN]
+            _LOGGER.debug("Setting up with stored data: %s", self._data)
+        else:
+            self._data = {
+                RES_UNLIMITED: False,
+                RES_USAGE: None,
+                RES_LIMIT: None,
+                RES_DATA_LEFT: None,
+                RES_PERIOD_START: None,
+                RES_PERIOD_END: None,
+            }
+            _LOGGER.debug("Setting up with new empty data")
+
         self.config = config
 
         if CONF_NAME in config:
@@ -130,12 +145,22 @@ class Tele2Manager:
     async def initialUpdate(self):
         _LOGGER.debug("Updating initial data")
         self._data = await self._hass.async_add_executor_job(self.api.getDataUsage)
+        self._hass.data[DOMAIN] = self._data
         self.oldDataLeft = 0
         if RES_DATA_LEFT in self._data:
             self.oldDataLeft = self._data[RES_DATA_LEFT]
+
+        if RES_ERROR in self._data and self._data[RES_ERROR] is not None:
+            _LOGGER.error(
+                "Error while updating Tele 2 data: %s", self._data[RES_ERROR].message
+            )
         _LOGGER.debug("Updated data: %s", str(self._data))
 
     def updateFromApi(self):
+        if self.isUpdating:
+            return
+
+        self.isUpdating = True
         deltaSeconds = (datetime.datetime.now() - self.lastPoll).total_seconds()
         shouldPoll = round(deltaSeconds) >= self.pollInterval
         if self.isDecreasing:
@@ -151,13 +176,21 @@ class Tele2Manager:
                 if self.isDecreasing
                 else self.pollInterval,
             )
-            return
-        if self.isUpdating:
+            self.isUpdating = False
             return
 
-        self.isUpdating = True
         _LOGGER.debug("Updating values from API")
         self._data = self.api.getDataUsage()
+        self._hass.data[DOMAIN] = self._data
+        if RES_ERROR in self._data and self._data[RES_ERROR] is not None:
+            _LOGGER.error(
+                "Error while updating Tele 2 data: %s", self._data[RES_ERROR].message
+            )
+            self.lastPoll = datetime.datetime.now()
+            self.tries = 0
+            self.isUpdating = False
+            return
+
         self.isDecreasing = False
         if RES_DATA_LEFT in self._data and self._data[RES_DATA_LEFT] is not None:
             self.isDecreasing = self._data[RES_DATA_LEFT] < self.oldDataLeft

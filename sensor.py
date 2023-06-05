@@ -27,6 +27,7 @@ from pytele2api.const import (
     RES_PERIOD_END,
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
+    RES_ERROR,
 )
 
 from .const import (
@@ -102,7 +103,7 @@ async def _dry_setup(hass, config, add_entities, discovery_info=None):
     )
 
     if DOMAIN in hass.data:
-        _LOGGER.debug(hass.data[DOMAIN])
+        _LOGGER.debug("data from hass: %s", hass.data[DOMAIN])
 
 
 async def async_setup_platform(
@@ -175,7 +176,8 @@ class Tele2Sensor(SensorEntity):
             self._attr_device_class = SensorDeviceClass.DATA_SIZE
             self._attr_state_class = SensorStateClass.MEASUREMENT
             self._attr_native_unit_of_measurement = UnitOfInformation.MEGABYTES
-            self._attr_native_value = 0
+            if self._updateField in self._tele2Session._data:
+                self._attr_native_value = self._tele2Session._data[self._updateField]
             self._attr_suggested_display_precision = None
             self._attr_suggested_unit_of_measurement = "GB"
         elif sensorType == SensorType.DATE:
@@ -212,11 +214,15 @@ class Tele2Sensor(SensorEntity):
             "model": self._tele2Session.config[CONF_SUBSCRIPTIONMODEL],
         }
 
+    async def async_will_remove_from_hass(self):
+        return
+
     async def async_update(self) -> None:
         """Manual updates of the sensor."""
-        self.hass.async_create_task(self._tele2Session._update())
+        if not self._tele2Session.isUpdating:
+            self.hass.async_create_task(self._tele2Session._update())
         newValue = self._tele2Session._data[self._updateField]
-        if newValue != self._attr_native_value:
+        if newValue != self._attr_native_value and newValue is not None:
             self._attr_native_value = newValue
 
 
@@ -269,11 +275,14 @@ class Tele2BinaryDataSensor(BinarySensorEntity):
         _LOGGER.debug("Return from is_on")
         return self._attr_is_on
 
+    async def async_will_remove_from_hass(self):
+        return
+
     async def async_update(self) -> None:
         """Manual updates of the sensor."""
         _LOGGER.debug(
             "Will update unlimited binary sensor data (async) from previous call"
         )
         newValue = self._tele2Session._data[self._updateField]
-        if newValue != self._attr_is_on:
+        if newValue != self._attr_is_on and newValue is not None:
             self._attr_is_on = newValue
