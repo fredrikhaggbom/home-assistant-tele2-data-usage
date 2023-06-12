@@ -66,6 +66,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(entry, "sensor")
     )
+
+    entry.add_update_listener(async_reload_entry)
     return res
 
 
@@ -80,6 +82,12 @@ async def _dry_setup(hass: HomeAssistant, config: Config) -> bool:
     """Set up using yaml config file."""
     _LOGGER.debug("Tele2 setup done!")
     return True
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await async_unload_entry(hass, entry)
+    await async_setup_entry(hass, entry)
 
 
 class Tele2Manager:
