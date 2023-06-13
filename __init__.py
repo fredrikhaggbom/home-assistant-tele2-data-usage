@@ -75,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass, entry):
     """Unload a config entry."""
     _LOGGER.debug("Unloading Tele2 component")
-    hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    await hass.config_entries.async_forward_entry_unload(entry, "sensor")
     return True
 
 

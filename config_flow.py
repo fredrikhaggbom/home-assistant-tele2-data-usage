@@ -43,13 +43,6 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict:
     return result
 
 
-@staticmethod
-@callback
-def async_get_options_flow(config_entry):
-    """Get the options flow for this handler."""
-    return OptionsFlowHandler(config_entry)
-
-
 class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Config flow for Tele2."""
 
@@ -105,6 +98,12 @@ class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         Instead, we're going to rely on the values that are in config file.
         """
         return self.async_create_entry(title="configuration.yaml", data={})
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
