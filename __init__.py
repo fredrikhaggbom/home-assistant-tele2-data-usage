@@ -68,6 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     entry.add_update_listener(async_reload_entry)
+    entry.async_on_unload(entry.add_update_listener(update_listener))
     return res
 
 
@@ -86,6 +87,13 @@ async def _dry_setup(hass: HomeAssistant, config: Config) -> bool:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
+    await async_unload_entry(hass, entry)
+    await async_setup_entry(hass, entry)
+
+
+async def update_listener(hass, entry):
+    """Handle options update."""
+    _LOGGER.debug("Config changed, reloading!")
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 

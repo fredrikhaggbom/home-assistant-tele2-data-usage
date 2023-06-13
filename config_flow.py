@@ -10,8 +10,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
 )
-from homeassistant.core import HomeAssistant
-
+from homeassistant.core import HomeAssistant, callback
 
 from pytele2api.const import (
     CONF_SUBSCRIPTION,
@@ -42,6 +41,13 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict:
 
     _LOGGER.debug("Got subId: " + result[CONF_SUBSCRIPTION])
     return result
+
+
+@staticmethod
+@callback
+def async_get_options_flow(config_entry):
+    """Get the options flow for this handler."""
+    return OptionsFlowHandler(config_entry)
 
 
 class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -99,3 +105,42 @@ class Tele2FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         Instead, we're going to rely on the values that are in config file.
         """
         return self.async_create_entry(title="configuration.yaml", data={})
+
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    """Handles options flow for the component."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, any] = None
+    ) -> dict[str, any]:
+        """Manage the options for the custom component."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            _LOGGER.debug("Adding options: %s", user_input)
+            _LOGGER.debug("Earlier: %s", self.config_entry)
+            new_data = self.config_entry.data.copy()
+            new_data[POLL_INTERVAL] = user_input[POLL_INTERVAL]
+
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                data=new_data,
+            )
+
+            return self.async_create_entry(title="Tele2", data=user_input)
+
+        currentPollInterval = 1800
+        if POLL_INTERVAL in self.config_entry.data:
+            currentPollInterval = self.config_entry.data[POLL_INTERVAL]
+
+        options_schema = vol.Schema(
+            {
+                vol.Optional(POLL_INTERVAL, default=currentPollInterval): int,
+            }
+        )
+        return self.async_show_form(
+            step_id="init", data_schema=options_schema, errors=errors
+        )
