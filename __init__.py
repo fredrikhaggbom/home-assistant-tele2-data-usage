@@ -168,7 +168,7 @@ class Tele2Manager:
 
         if RES_ERROR in self._data and self._data[RES_ERROR] is not None:
             _LOGGER.error(
-                "Error while updating Tele 2 data: %s", self._data[RES_ERROR].message
+                "Error while updating Tele 2 data: %s", str(self._data[RES_ERROR])
             )
         _LOGGER.debug("Updated data: %s", str(self._data))
 
@@ -200,7 +200,7 @@ class Tele2Manager:
         self._hass.data[DOMAIN] = self._data
         if RES_ERROR in self._data and self._data[RES_ERROR] is not None:
             _LOGGER.error(
-                "Error while updating Tele 2 data: %s", self._data[RES_ERROR].message
+                "Error while updating Tele 2 data: %s", str(self._data[RES_ERROR])
             )
             self.lastPoll = datetime.datetime.now()
             self.tries = 0
