@@ -6,6 +6,6 @@
   "domain": "tele2_datausage",
   "iot_class": "cloud_polling",
   "name": "Tele2: Data usage",
-  "requirements": ["pytele2api>=0.1.6"],
+  "requirements": ["pytele2api>=0.1.7"],
   "version": "0.0.2"
 }
