@@ -27,6 +27,7 @@ from pytele2api.const import (
     RES_PERIOD_END,
     CONF_SUBSCRIPTION,
     CONF_SUBSCRIPTIONMODEL,
+    RES_USAGE,
     RES_ERROR,
 )
 
@@ -75,6 +76,9 @@ async def _dry_setup(hass, config, add_entities, discovery_info=None):
     dataLeftSensor = Tele2Sensor(
         hass, api, SensorType.DATA, "Tele2 Data Left", "tele2.dataleft", RES_DATA_LEFT
     )
+    usageSensor = Tele2Sensor(
+        hass, api, SensorType.DATA, "Tele2 Data Used", "tele2.datausage", RES_USAGE
+    )
     dataTotal = Tele2Sensor(
         hass, api, SensorType.DATA, "Tele2 Data Total", "tele2.datatotal", RES_LIMIT
     )
@@ -99,7 +103,14 @@ async def _dry_setup(hass, config, add_entities, discovery_info=None):
     )
 
     add_entities(
-        [dataLeftSensor, dataTotal, dataPeriodStart, dataPeriodEnd, unlimitedSensor]
+        [
+            dataLeftSensor,
+            usageSensor,
+            dataTotal,
+            dataPeriodStart,
+            dataPeriodEnd,
+            unlimitedSensor,
+        ]
     )
 
     if DOMAIN in hass.data:
@@ -120,6 +131,9 @@ async def async_setup_platform(
     dataLeftSensor = Tele2Sensor(
         hass, api, SensorType.DATA, "Tele2 Data Left", "tele2.dataleft", RES_DATA_LEFT
     )
+    usageSensor = Tele2Sensor(
+        hass, api, SensorType.DATA, "Tele2 Data Used", "tele2.datausage", RES_USAGE
+    )
     dataTotal = Tele2Sensor(
         hass, api, SensorType.DATA, "Tele2 Data Total", "tele2.datatotal", RES_LIMIT
     )
@@ -145,7 +159,14 @@ async def async_setup_platform(
         hass, api, "Tele2 Unlimited Data", "tele2.unlimiteddata", RES_UNLIMITED
     )
     add_entities(
-        [dataLeftSensor, dataTotal, dataPeriodStart, dataPeriodEnd, unlimitedSensor],
+        [
+            dataLeftSensor,
+            usageSensor,
+            dataTotal,
+            dataPeriodStart,
+            dataPeriodEnd,
+            unlimitedSensor,
+        ],
         True,
     )
     return True
