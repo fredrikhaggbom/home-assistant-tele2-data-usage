@@ -220,7 +220,7 @@ class Tele2Sensor(SensorEntity):
     async def async_update(self) -> None:
         """Manual updates of the sensor."""
         if not self._tele2Session.isUpdating:
-            self.hass.async_create_task(self._tele2Session._update())
+            await self._tele2Session._update()
         newValue = self._tele2Session._data[self._updateField]
         if newValue != self._attr_native_value and newValue is not None:
             self._attr_native_value = newValue

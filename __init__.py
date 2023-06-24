@@ -3,6 +3,7 @@ import requests
 import datetime
 import json
 import pytele2api
+import asyncio
 
 import voluptuous as vol
 
@@ -55,13 +56,14 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: core.HomeAssistant, config: dict) -> bool:
     """Set up the Tele2 Data usage component."""
-    _LOGGER.debug("Init in async_setup: ", str(config))
+    _LOGGER.debug("Init in async_setup")
+    # Init Tele2Manager and store in data[domain]
     return await _dry_setup(hass, config)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tele2 as config entry."""
-    _LOGGER.debug("Init in async_setup_entry: ", str(entry.data))
+    _LOGGER.debug("Init in async_setup_entry")
     res = await _dry_setup(hass, entry.data)
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(entry, "sensor")
